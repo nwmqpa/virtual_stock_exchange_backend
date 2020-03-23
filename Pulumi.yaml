@@ -1,0 +1,3 @@
+name: virtual_stock_exchange
+runtime: nodejs
+description: Virtual Stock Exchange for AWS

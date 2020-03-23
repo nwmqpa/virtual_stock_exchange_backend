@@ -1,0 +1,14 @@
+{
+    "name": "virtual_stock_exchange",
+    "devDependencies": {
+        "@types/node": "^8.10.59"
+    },
+    "dependencies": {
+        "@pulumi/aws": "^1.0.0",
+        "@pulumi/awsx": "^0.18.10",
+        "@pulumi/pulumi": "^1.0.0",
+        "@types/uuid": "^7.0.2",
+        "aws-sdk": "^2.643.0",
+        "uuid": "^7.0.2"
+    }
+}
