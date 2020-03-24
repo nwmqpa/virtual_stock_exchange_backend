@@ -31,9 +31,9 @@ export const putOrder = (buys: Table, sells: Table): EventHandler => {
             Item: {
                 'orderId': uuid.v4(),
                 'resourceId': order.resourceId,
-                'quantity': order.quantity.toString(),
-                'price': order.price.toString(),
-                'issuerId': order.issuerId.toString()
+                'quantity': order.quantity,
+                'price': order.price,
+                'issuerId': order.issuerId
             }
         };
 

@@ -36,6 +36,15 @@ const inventories = new aws.dynamodb.Table("inventories", {
     writeCapacity: 1,
 });
 
+const accounts = new aws.dynamodb.Table("accounts", {
+    attributes: [
+        { name: "ownerId", type: "S" },
+    ],
+    hashKey: "ownerId",
+    readCapacity: 1,
+    writeCapacity: 1,
+});
+
 
 const resources = new aws.dynamodb.Table("resources", {
     attributes: [
@@ -94,7 +103,7 @@ const old_transactions = new aws.dynamodb.Table("old_transactions", {
 
 const api = new awsx.apigateway.API("virtual_stock_exchange", {
     routes: ROUTES({
-        buys, sells, resources, inventories, transactions, ohlcv, old_orders, old_transactions
+        buys, sells, resources, inventories, accounts, transactions, ohlcv, old_orders, old_transactions
     }),
 })
 
