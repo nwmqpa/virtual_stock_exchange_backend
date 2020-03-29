@@ -10,6 +10,19 @@ type Request = awsx.apigateway.Request
 type Response = awsx.apigateway.Response;
 type EventHandler = aws.lambda.EventHandler<Request, Response>;
 
+const client = new aws.sdk.DynamoDB.DocumentClient();
+
+interface Transaction {
+
+    transactionId: string;
+    resourceId: string;
+    quantity: number;
+    buyOrderId: string;
+    sellOrderId: string;
+
+}
+
+
 export const putOrder = (buys: Table, sells: Table): EventHandler => {
 
     return async (event: Request): Promise<Response> => {
@@ -23,33 +36,25 @@ export const putOrder = (buys: Table, sells: Table): EventHandler => {
             }
         }
 
-        const client = new aws.sdk.DynamoDB.DocumentClient();
         let order: Order = JSON.parse(new Buffer(event.body, "base64").toString());
 
         var params = {
-            TableName: 'CUSTOMER_LIST',
+            TableName: order.mode == "BUY" ? buys.name.get() : sells.name.get(),
             Item: {
                 'orderId': uuid.v4(),
                 'resourceId': order.resourceId,
                 'quantity': order.quantity,
-                'price': order.price,
+                'price': order.price.toFixed(2),
                 'issuerId': order.issuerId
             }
         };
-
-        if (order.mode == "BUY") {
-            params.TableName = buys.name.get();
-        } else {
-            params.TableName = sells.name.get();
-        }
-
 
         await client.put(params).promise();
 
         return {
             statusCode: 200,
             body: JSON.stringify({
-                orderId: params.Item.orderId 
+                orderId: params.Item.orderId
             })
         }
     }

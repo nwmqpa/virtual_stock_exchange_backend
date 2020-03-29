@@ -1,2 +1,6 @@
 /bin/
-/node_modules/
+node_modules
+*.js
+*.zip
+package-lock.json
+yarn-error.log

@@ -1,7 +1,12 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import * as awsx from "@pulumi/awsx";
+import * as util from "util";
+import { exec } from "child_process";
+
 import { ROUTES } from "./routes/lib";
+
+const execPromise = util.promisify(exec)
 
 const buys = new aws.dynamodb.Table("buys", {
     attributes: [
@@ -12,6 +17,8 @@ const buys = new aws.dynamodb.Table("buys", {
     rangeKey: "orderId",
     readCapacity: 1,
     writeCapacity: 1,
+    streamEnabled: true,
+    streamViewType: "NEW_AND_OLD_IMAGES"
 });
 
 const sells = new aws.dynamodb.Table("sells", {
@@ -23,6 +30,8 @@ const sells = new aws.dynamodb.Table("sells", {
     rangeKey: "orderId",
     readCapacity: 1,
     writeCapacity: 1,
+    streamEnabled: true,
+    streamViewType: "NEW_AND_OLD_IMAGES"
 });
 
 const inventories = new aws.dynamodb.Table("inventories", {
@@ -100,11 +109,61 @@ const old_transactions = new aws.dynamodb.Table("old_transactions", {
     writeCapacity: 1,
 });
 
+// Configure IAM so that the AWS Lambda can be run.
+const handlerRole = new aws.iam.Role("handlerRole", {
+    assumeRolePolicy: {
+        Version: "2012-10-17",
+        Statement: [{
+            Action: "sts:AssumeRole",
+            Principal: {
+                Service: "lambda.amazonaws.com",
+            },
+            Effect: "Allow",
+            Sid: "",
+        }],
+    },
+});
+
+new aws.iam.RolePolicyAttachment("funcRoleAttach", {
+    role: handlerRole,
+    policyArn: aws.iam.AWSLambdaFullAccess,
+});
+
 
 const api = new awsx.apigateway.API("virtual_stock_exchange", {
-    routes: ROUTES({
-        buys, sells, resources, inventories, accounts, transactions, ohlcv, old_orders, old_transactions
-    }),
+    routes: [
+        {
+            path: "/account", method: "POST", eventHandler: new aws.lambda.Function("get_account", {
+                handler: "index.handler",
+                code: execPromise("yarn --cwd ./lambdas/get_account run bundle").then(_ =>
+                    new pulumi.asset.FileArchive("./lambdas/get_account/bundle.zip")
+                ),
+                runtime: "nodejs12.x",
+                role: handlerRole.arn,
+                environment: {
+                    variables: {
+                        "ACCOUNTS_TABLE": accounts.name
+                    }
+                }
+            })
+        },
+        {
+            path: "/trends", method: "GET", eventHandler: new aws.lambda.Function("get_trends", {
+                handler: "index.handler",
+                code: execPromise("yarn --cwd ./lambdas/get_trends run bundle").then(_ =>
+                    new pulumi.asset.FileArchive("./lambdas/get_trends/bundle.zip")
+                ),
+                runtime: "nodejs12.x",
+                role: handlerRole.arn,
+                environment: {
+                    variables: {
+                        "RESOURCES_TABLE": resources.name,
+                        "OHLCV_TABLE": ohlcv.name
+                    }
+                }
+            })
+        }
+    ],
 })
 
 // Export the auto-generated API Gateway base URL.

@@ -22,19 +22,27 @@ export const getOHLC = (ohlcv: Table): EventHandler => {
             }
         }
         
+
         let data = JSON.parse(new Buffer(event.body, "base64").toString());
-        console.log(data);
+
+        const resourceId = JSON.parse(new Buffer(event.body, "base64").toString())["resourceId"];
+
+        const client = new aws.sdk.DynamoDB.DocumentClient();
+
+        var params = {
+            TableName: ohlcv.name.get(),
+            KeyConditionExpression: 'resourceId = :rId',
+            ExpressionAttributeValues: {
+                ':rId': resourceId
+            }
+        };
+
+        const result = await client.query(params).promise();
 
         return {
             statusCode: 200,
             body: JSON.stringify({
-                ohlc: [{
-                    "open": 10,
-                    "low": 8,
-                    "high": 11,
-                    "close": 10.5,
-                    "volumeto": 20
-                }]
+                ohlcv: result.Items
             })
         }
 
