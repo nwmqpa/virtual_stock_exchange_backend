@@ -3,7 +3,6 @@ import * as awsx from "@pulumi/awsx";
 import * as AWS from 'aws-sdk';
 
 export const handler = async (event: awsx.apigateway.Request): Promise<awsx.apigateway.Response> => {
-
     if (process.env.RESOURCES_TABLE == undefined) {
         return {
             statusCode: 500,
@@ -12,6 +11,8 @@ export const handler = async (event: awsx.apigateway.Request): Promise<awsx.apig
             })
         }
     }
+    const resourcesTable = process.env.RESOURCES_TABLE;
+
     if (process.env.OHLCV_TABLE == undefined) {
         return {
             statusCode: 500,
@@ -20,7 +21,6 @@ export const handler = async (event: awsx.apigateway.Request): Promise<awsx.apig
             })
         }
     }
-    const resourcesTable = process.env.RESOURCES_TABLE;
     const ohlcvTable = process.env.OHLCV_TABLE;
 
     const client = new AWS.DynamoDB.DocumentClient();

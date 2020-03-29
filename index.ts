@@ -162,6 +162,21 @@ const api = new awsx.apigateway.API("virtual_stock_exchange", {
                     }
                 }
             })
+        },
+        {
+            path: "/resources", method: "GET", eventHandler: new aws.lambda.Function("get_resources", {
+                handler: "index.handler",
+                code: execPromise("yarn --cwd ./lambdas/get_resources run bundle").then(_ =>
+                    new pulumi.asset.FileArchive("./lambdas/get_resources/bundle.zip")
+                ),
+                runtime: "nodejs12.x",
+                role: handlerRole.arn,
+                environment: {
+                    variables: {
+                        "RESOURCES_TABLE": resources.name,
+                    }
+                }
+            })
         }
     ],
 })

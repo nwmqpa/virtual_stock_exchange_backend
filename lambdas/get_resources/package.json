@@ -1,7 +1,7 @@
 {
-  "name": "get_trends",
+  "name": "get_resources",
   "version": "1.0.0",
-  "description": "Get Trends Lambda",
+  "description": "Get Resources Lambda",
   "main": "index.js",
   "scripts": {
     "compile": "tsc",

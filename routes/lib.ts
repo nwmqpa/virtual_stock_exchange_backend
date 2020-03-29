@@ -1,5 +1,5 @@
 import { putOrder } from './putOrder';
-import { getResources } from './getResources';
+import { getResources } from '../lambdas/get_resources/getResources';
 import { getInventory } from './getInventory';
 import { putResource } from './putResource';
 import { getAccount } from './getAccount';
@@ -27,7 +27,6 @@ export const ROUTES = (tables: {
         { path: "/order", method: "POST", eventHandler: getOrders(tables.buys, tables.sells) },
         { path: "/inventory", method: "POST", eventHandler: getInventory(tables.inventories) },
         { path: "/resources", method: "PUT", eventHandler: putResource(tables.resources) },
-        { path: "/resources", method: "GET", eventHandler: getResources(tables.resources) },
         { path: "/ohlcv", method: "POST", eventHandler: getOHLC(tables.ohlcv) },
     ]
 };

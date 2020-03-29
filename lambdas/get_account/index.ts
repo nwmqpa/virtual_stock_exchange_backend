@@ -3,20 +3,22 @@ import * as AWS from 'aws-sdk';
 
 export const handler = async (event: awsx.apigateway.Request): Promise<awsx.apigateway.Response> => {
 
-    if (event.body == null) {
-        return {
-            statusCode: 400,
-            body: JSON.stringify({
-                error: "No body is received"
-            })
-        }
-    }
-
     if (process.env.ACCOUNTS_TABLE == undefined) {
         return {
             statusCode: 500,
             body: JSON.stringify({
                 error: "Account table name not defined"
+            })
+        }
+    }
+    const accountsTable = process.env.ACCOUNTS_TABLE
+    
+
+    if (event.body == null) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: "No body is received"
             })
         }
     }
@@ -27,7 +29,7 @@ export const handler = async (event: awsx.apigateway.Request): Promise<awsx.apig
 
 
     const item = await client.get({
-        TableName: process.env.ACCOUNTS_TABLE,
+        TableName: accountsTable,
         Key: {
             ownerId: account.ownerId
         }
@@ -35,7 +37,7 @@ export const handler = async (event: awsx.apigateway.Request): Promise<awsx.apig
 
     if (item.Item == undefined) {
         await client.update({
-            TableName: process.env.ACCOUNTS_TABLE,
+            TableName: accountsTable,
             Key: {
                 ownerId: account.ownerId
             },
@@ -54,7 +56,7 @@ export const handler = async (event: awsx.apigateway.Request): Promise<awsx.apig
 
     if (account.fcmToken !== undefined) {
         await client.update({
-            TableName: process.env.ACCOUNTS_TABLE,
+            TableName: accountsTable,
             Key: {
                 ownerId: account.ownerId
             },
