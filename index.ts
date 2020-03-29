@@ -135,7 +135,7 @@ const api = new awsx.apigateway.API("virtual_stock_exchange", {
         {
             path: "/account", method: "POST", eventHandler: new aws.lambda.Function("get_account", {
                 handler: "index.handler",
-                code: execPromise("yarn --cwd ./lambdas/get_account run bundle").then(_ =>
+                code: execPromise("yarn --cwd ./lambdas/get_account run clean && yarn --cwd ./lambdas/get_account run bundle").then(_ =>
                     new pulumi.asset.FileArchive("./lambdas/get_account/bundle.zip")
                 ),
                 runtime: "nodejs12.x",
@@ -150,7 +150,7 @@ const api = new awsx.apigateway.API("virtual_stock_exchange", {
         {
             path: "/trends", method: "GET", eventHandler: new aws.lambda.Function("get_trends", {
                 handler: "index.handler",
-                code: execPromise("yarn --cwd ./lambdas/get_trends run bundle").then(_ =>
+                code: execPromise("yarn --cwd ./lambdas/get_trends run clean && yarn --cwd ./lambdas/get_trends run bundle").then(_ =>
                     new pulumi.asset.FileArchive("./lambdas/get_trends/bundle.zip")
                 ),
                 runtime: "nodejs12.x",
@@ -166,8 +166,23 @@ const api = new awsx.apigateway.API("virtual_stock_exchange", {
         {
             path: "/resources", method: "GET", eventHandler: new aws.lambda.Function("get_resources", {
                 handler: "index.handler",
-                code: execPromise("yarn --cwd ./lambdas/get_resources run bundle").then(_ =>
+                code: execPromise("yarn --cwd ./lambdas/get_resources run clean && yarn --cwd ./lambdas/get_resources run bundle").then(_ =>
                     new pulumi.asset.FileArchive("./lambdas/get_resources/bundle.zip")
+                ),
+                runtime: "nodejs12.x",
+                role: handlerRole.arn,
+                environment: {
+                    variables: {
+                        "RESOURCES_TABLE": resources.name,
+                    }
+                }
+            })
+        },
+        {
+            path: "/resources", method: "PUT", eventHandler: new aws.lambda.Function("put_resources", {
+                handler: "index.handler",
+                code: execPromise("yarn --cwd ./lambdas/put_resources run clean && yarn --cwd ./lambdas/put_resources run bundle").then(_ =>
+                    new pulumi.asset.FileArchive("./lambdas/put_resources/bundle.zip")
                 ),
                 runtime: "nodejs12.x",
                 role: handlerRole.arn,

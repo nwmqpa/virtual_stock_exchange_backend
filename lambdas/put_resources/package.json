@@ -1,7 +1,7 @@
 {
-  "name": "get_account",
+  "name": "put_resources",
   "version": "1.0.0",
-  "description": "Get Account Lambda",
+  "description": "Put resources Lambda",
   "main": "index.js",
   "scripts": {
     "compile": "tsc",

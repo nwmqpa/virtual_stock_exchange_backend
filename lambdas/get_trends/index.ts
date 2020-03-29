@@ -1,8 +1,10 @@
-"use strict;"
 import * as awsx from "@pulumi/awsx";
 import * as AWS from 'aws-sdk';
 
-export const handler = async (event: awsx.apigateway.Request): Promise<awsx.apigateway.Response> => {
+type Request = awsx.apigateway.Request
+type Response = awsx.apigateway.Response;
+
+export const handler = async (event: Request): Promise<Response> => {
     if (process.env.RESOURCES_TABLE == undefined) {
         return {
             statusCode: 500,
