@@ -3,10 +3,6 @@ import * as AWS from 'aws-sdk';
 
 import { Order } from "./order";
 
-interface OutputOrder extends Order {
-    orderId: string;
-}
-
 type Request = awsx.apigateway.Request
 type Response = awsx.apigateway.Response;
 
@@ -50,7 +46,7 @@ type Response = awsx.apigateway.Response;
 
         const client = new AWS.DynamoDB.DocumentClient();
 
-        const buyOrders: OutputOrder[] | undefined = await client.scan({
+        const buyOrders: Order[] | undefined = await client.scan({
             TableName: buysTable,
             FilterExpression: '#issuerId = :issuerId',
             ExpressionAttributeNames: {
@@ -70,7 +66,7 @@ type Response = awsx.apigateway.Response;
             }
         }));
 
-        const sellOrders: OutputOrder[] | undefined = await client.scan({
+        const sellOrders: Order[] | undefined = await client.scan({
             TableName: sellsTable,
             FilterExpression: '#issuerId = :issuerId',
             ExpressionAttributeNames: {

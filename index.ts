@@ -223,6 +223,22 @@ const api = new awsx.apigateway.API("virtual_stock_exchange", {
                     }
                 }
             })
+        },
+        {
+            path: "/order", method: "PUT", eventHandler: new aws.lambda.Function("put_order", {
+                handler: "index.handler",
+                code: execPromise("yarn --cwd ./lambdas/put_order run clean && yarn --cwd ./lambdas/put_order run bundle").then(_ =>
+                    new pulumi.asset.FileArchive("./lambdas/put_order/bundle.zip")
+                ),
+                runtime: "nodejs12.x",
+                role: handlerRole.arn,
+                environment: {
+                    variables: {
+                        "SELLS_TABLE": sells.name,
+                        "BUYS_TABLE": buys.name,
+                    }
+                }
+            })
         }
     ],
 })

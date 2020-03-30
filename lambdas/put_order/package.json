@@ -1,0 +1,17 @@
+{
+  "name": "put_order",
+  "version": "1.0.0",
+  "description": "Put order Lambda",
+  "main": "index.js",
+  "scripts": {
+    "compile": "tsc",
+    "clean": "rm -rf *.js node_modules bundle.zip package-lock.json",
+    "bundle": "yarn --no-lockfile && yarn run compile && zip bundle.zip -r node_modules *.js"
+  },
+  "author": "Thomas Nicollet",
+  "license": "ISC",
+  "dependencies": {
+    "@types/uuid": "^7.0.2",
+    "uuid": "^7.0.2"
+  }
+}
