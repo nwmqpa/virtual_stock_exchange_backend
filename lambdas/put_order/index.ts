@@ -52,7 +52,7 @@ export const handler = async (event: Request): Promise<Response> => {
             'orderId': order.orderId,
             'resourceId': order.resourceId,
             'quantity': order.quantity,
-            'price': order.price.toFixed(2),
+            'price': Number(order.price.toFixed(2)),
             'issuerId': order.issuerId
         }
     };
