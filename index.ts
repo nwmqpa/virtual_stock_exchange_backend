@@ -308,6 +308,8 @@ const api = new awsx.apigateway.API("virtual_stock_exchange", {
                 role: handlerRole.arn,
                 environment: {
                     variables: {
+                        "ACCOUNTS_TABLE": accounts.name,
+                        "INVENTORIES_TABLE": inventories.name,
                         "SELLS_TABLE": sells.name,
                         "BUYS_TABLE": buys.name,
                     }

@@ -9,26 +9,112 @@ type Response = awsx.apigateway.Response;
 
 const client = new AWS.DynamoDB.DocumentClient();
 
-export const handler = async (event: Request): Promise<Response> => {
-    if (process.env.BUYS_TABLE == undefined) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                error: "BUYS_TABLE is not defined"
-            })
-        }
-    }
-    const buysTable = process.env.BUYS_TABLE;
+if (process.env.BUYS_TABLE == undefined) {
+    console.error("BUYS_TABLE is not defined")
+    process.exit()
+} else if (process.env.SELLS_TABLE == undefined) {
+    console.error("SELLS_TABLE is not defined")
+    process.exit()
+} else if (process.env.ACCOUNTS_TABLE == undefined) {
+    console.error("ACCOUNTS_TABLE is not defined")
+    process.exit()
+} else if (process.env.INVENTORIES_TABLE == undefined) {
+    console.error("INVENTORIES_TABLE is not defined")
+    process.exit()
+}
 
-    if (process.env.SELLS_TABLE == undefined) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                error: "SELLS_TABLE is not defined"
-            })
+const buysTable = process.env.BUYS_TABLE;
+const sellsTable = process.env.SELLS_TABLE;
+const accountsTable = process.env.ACCOUNTS_TABLE;
+const inventoriesTable = process.env.INVENTORIES_TABLE;
+
+
+const payOrder = async (order: Order): Promise<Response | undefined> => {
+    const result = await client.get({
+        TableName: accountsTable,
+        Key: {
+            ownerId: order.issuerId,
         }
+    }).promise()
+    if (result.Item != undefined) {
+        const toPay = order.price * order.quantity;
+        if (toPay > result.Item["balance"]) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({
+                    error: "Insufficient funds"
+                })
+            };
+        }
+        await client.update({
+            TableName: accountsTable,
+            Key: {
+                ownerId: order.issuerId
+            },
+            UpdateExpression: "ADD #balance :topay",
+            ExpressionAttributeValues: {
+                ":topay": -toPay
+            },
+            ExpressionAttributeNames: {
+                "#balance": "balance"
+            }
+        }).promise()
+        return undefined;
+    } else {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: "No user is registered to this issuerId"
+            })
+        };
     }
-    const sellsTable = process.env.SELLS_TABLE;
+}
+
+const retrieveStock = async (order: Order): Promise<Response | undefined> => {
+    const result = await client.get({
+        TableName: inventoriesTable,
+        Key: {
+            ownerId: order.issuerId,
+            resourceId: order.resourceId
+        }
+    }).promise()
+    if (result.Item != undefined) {
+        const toPay = order.quantity;
+        if (toPay > result.Item["quantity"]) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({
+                    error: "Insufficient stocks"
+                })
+            };
+        }
+        await client.update({
+            TableName: inventoriesTable,
+            Key: {
+                ownerId: order.issuerId,
+                resourceId: order.resourceId
+            },
+            UpdateExpression: "ADD #quantity :topay",
+            ExpressionAttributeValues: {
+                ":topay": -toPay
+            },
+            ExpressionAttributeNames: {
+                "#quantity": "quantity"
+            }
+        }).promise()
+        return undefined;
+    } else {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: "No user is registered to this issuerId"
+            })
+        };
+    }
+}
+
+
+export const handler = async (event: Request): Promise<Response> => {
 
     if (event.body == null) {
         return {
@@ -39,14 +125,22 @@ export const handler = async (event: Request): Promise<Response> => {
         }
     }
 
-    let order: Order;
-    if (event.isBase64Encoded) {
-        order = {orderId: uuid.v4(), ...JSON.parse(new Buffer(event.body, "base64").toString())};
-    } else {
-        order = {orderId: uuid.v4(), ...JSON.parse(event.body)};
+    const bodyData = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body, "base64").toString() : event.body);
+    const order: Order = { orderId: uuid.v4(), ...bodyData }
+
+    if (order.mode == "BUY") {
+        const result = await payOrder(order);
+        if (result != undefined) {
+            return result;
+        }
+    } else if (order.mode == "SELL") {
+        const result = await retrieveStock(order);
+        if (result != undefined) {
+            return result;
+        }
     }
 
-    var params = {
+    await client.put({
         TableName: order.mode == "BUY" ? buysTable : sellsTable,
         Item: {
             'orderId': order.orderId,
@@ -55,9 +149,7 @@ export const handler = async (event: Request): Promise<Response> => {
             'price': Number(order.price.toFixed(2)),
             'issuerId': order.issuerId
         }
-    };
-
-    await client.put(params).promise();
+    }).promise();
 
     return {
         statusCode: 200,
