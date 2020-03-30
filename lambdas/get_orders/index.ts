@@ -1,22 +1,36 @@
-import * as aws from "@pulumi/aws";
 import * as awsx from "@pulumi/awsx";
 import * as AWS from 'aws-sdk';
-import * as uuid from 'uuid';
 
-import { Order } from "../models/order";
+import { Order } from "./order";
 
 interface OutputOrder extends Order {
     orderId: string;
 }
 
-type Table = aws.dynamodb.Table;
 type Request = awsx.apigateway.Request
 type Response = awsx.apigateway.Response;
-type EventHandler = aws.lambda.EventHandler<Request, Response>;
 
-export const getOrders = (buys: Table, sells: Table): EventHandler => {
+    export const handler = async (event: Request): Promise<Response> => {
 
-    return async (event: Request): Promise<Response> => {
+        if (process.env.BUYS_TABLE == undefined) {
+            return {
+                statusCode: 500,
+                body: JSON.stringify({
+                    error: "BUYS_TABLE is not defined"
+                })
+            }
+        }
+        const buysTable = process.env.BUYS_TABLE;
+
+        if (process.env.SELLS_TABLE == undefined) {
+            return {
+                statusCode: 500,
+                body: JSON.stringify({
+                    error: "SELLS_TABLE is not defined"
+                })
+            }
+        }
+        const sellsTable = process.env.SELLS_TABLE;
 
         if (event.body == null) {
             return {
@@ -26,19 +40,24 @@ export const getOrders = (buys: Table, sells: Table): EventHandler => {
                 })
             }
         }
+        
+        let data: {issuerId: string};
+        if (event.isBase64Encoded) {
+            data = JSON.parse(new Buffer(event.body, "base64").toString());
+        } else {
+            data = JSON.parse(event.body);
+        }
 
-        const issuerId = JSON.parse(new Buffer(event.body, "base64").toString())["issuerId"];
-
-        const client = new aws.sdk.DynamoDB.DocumentClient();
+        const client = new AWS.DynamoDB.DocumentClient();
 
         const buyOrders: OutputOrder[] | undefined = await client.scan({
-            TableName: buys.name.get(),
+            TableName: buysTable,
             FilterExpression: '#issuerId = :issuerId',
             ExpressionAttributeNames: {
                 '#issuerId': "issuerId"
             },
             ExpressionAttributeValues: {
-                ':issuerId': issuerId
+                ':issuerId': data.issuerId
             }
         }).promise().then(items => items.Items?.map(item => {
             return {
@@ -52,13 +71,13 @@ export const getOrders = (buys: Table, sells: Table): EventHandler => {
         }));
 
         const sellOrders: OutputOrder[] | undefined = await client.scan({
-            TableName: sells.name.get(),
+            TableName: sellsTable,
             FilterExpression: '#issuerId = :issuerId',
             ExpressionAttributeNames: {
                 '#issuerId': "issuerId"
             },
             ExpressionAttributeValues: {
-                ':issuerId': issuerId
+                ':issuerId': data.issuerId
             }
         }).promise().then(items => items.Items?.map(item => {
             return {
@@ -71,21 +90,11 @@ export const getOrders = (buys: Table, sells: Table): EventHandler => {
             }
         }));
 
-        let orders: OutputOrder[] = []
-        if (buyOrders != undefined) {
-            orders = orders.concat(buyOrders)
-        }
-        if (sellOrders != undefined) {
-            orders = orders.concat(sellOrders)
-        }
-        
-
         return {
             statusCode: 200,
             body: JSON.stringify({
-                orders
+                orders: (buyOrders ?? []).concat(sellOrders ?? [])
             })
         }
 
     }
-}
