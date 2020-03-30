@@ -4,8 +4,6 @@ import * as awsx from "@pulumi/awsx";
 import * as util from "util";
 import { exec } from "child_process";
 
-import { ROUTES } from "./routes/lib";
-
 const execPromise = util.promisify(exec)
 
 const buys = new aws.dynamodb.Table("buys", {
@@ -236,6 +234,21 @@ const api = new awsx.apigateway.API("virtual_stock_exchange", {
                     variables: {
                         "SELLS_TABLE": sells.name,
                         "BUYS_TABLE": buys.name,
+                    }
+                }
+            })
+        },
+        {
+            path: "/inventory", method: "POST", eventHandler: new aws.lambda.Function("get_inventory", {
+                handler: "index.handler",
+                code: execPromise("yarn --cwd ./lambdas/get_inventory run clean && yarn --cwd ./lambdas/get_inventory run bundle").then(_ =>
+                    new pulumi.asset.FileArchive("./lambdas/get_inventory/bundle.zip")
+                ),
+                runtime: "nodejs12.x",
+                role: handlerRole.arn,
+                environment: {
+                    variables: {
+                        "INVENTORIES_TABLE": inventories.name,
                     }
                 }
             })
