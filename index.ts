@@ -93,17 +93,6 @@ sells.onEvent("onSellOrder", new aws.lambda.Function("on_sell_order", {
 })
 
 
-const inventories = new aws.dynamodb.Table("inventories", {
-    attributes: [
-        { name: "ownerId", type: "S" },
-        { name: "resourceId", type: "S" },
-    ],
-    hashKey: "ownerId",
-    rangeKey: "resourceId",
-    readCapacity: 1,
-    writeCapacity: 1,
-});
-
 const accounts = new aws.dynamodb.Table("accounts", {
     attributes: [
         { name: "ownerId", type: "S" },
@@ -124,7 +113,6 @@ accounts.onEvent("onAccountChange", new aws.lambda.Function("on_account_change",
     role: handlerRole.arn,
     environment: {
         variables: {
-            "ACCOUNTS_TABLE": accounts.name,
             "PRIVATE_KEY_FCM": config.requireSecret("privateKeyFcm")
         }
     }
@@ -132,7 +120,35 @@ accounts.onEvent("onAccountChange", new aws.lambda.Function("on_account_change",
     startingPosition: "LATEST"
 })
 
+const inventories = new aws.dynamodb.Table("inventories", {
+    attributes: [
+        { name: "ownerId", type: "S" },
+        { name: "resourceId", type: "S" },
+    ],
+    hashKey: "ownerId",
+    rangeKey: "resourceId",
+    readCapacity: 1,
+    writeCapacity: 1,
+    streamEnabled: true,
+    streamViewType: "NEW_IMAGE"
+});
 
+inventories.onEvent("onInventoryUpdate", new aws.lambda.Function("on_inventory_update", {
+    handler: "index.handler",
+    code: execPromise("yarn --cwd ./lambdas/on_inventory_update run clean && yarn --cwd ./lambdas/on_inventory_update run bundle").then(_ =>
+        new pulumi.asset.FileArchive("./lambdas/on_inventory_update/bundle.zip")
+    ),
+    runtime: "nodejs12.x",
+    role: handlerRole.arn,
+    environment: {
+        variables: {
+            "ACCOUNTS_TABLE": accounts.name,
+            "PRIVATE_KEY_FCM": config.requireSecret("privateKeyFcm")
+        }
+    }
+}), {
+    startingPosition: "LATEST"
+})
 
 const resources = new aws.dynamodb.Table("resources", {
     attributes: [

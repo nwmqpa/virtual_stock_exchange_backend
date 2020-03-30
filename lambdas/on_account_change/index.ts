@@ -11,7 +11,6 @@ interface Account {
     fcmToken?: string;
 }
 
-
 if (process.env.PRIVATE_KEY_FCM == undefined) {
     console.error("PRIVATE_KEY_FCM is not defined")
     process.exit()
