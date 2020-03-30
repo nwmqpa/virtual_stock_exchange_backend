@@ -1,7 +1,6 @@
 import { putOrder } from './putOrder';
 import { getInventory } from './getInventory';
 import { getOrders } from './getOrders';
-import { getOHLC } from './getOHLC';
 import { EventHandlerRoute } from '@pulumi/awsx/apigateway';
 import * as aws from "@pulumi/aws";
 
@@ -22,6 +21,5 @@ export const ROUTES = (tables: {
         { path: "/order", method: "PUT", eventHandler: putOrder(tables.buys, tables.sells) },
         { path: "/order", method: "POST", eventHandler: getOrders(tables.buys, tables.sells) },
         { path: "/inventory", method: "POST", eventHandler: getInventory(tables.inventories) },
-        { path: "/ohlcv", method: "POST", eventHandler: getOHLC(tables.ohlcv) },
     ]
 };

@@ -192,6 +192,21 @@ const api = new awsx.apigateway.API("virtual_stock_exchange", {
                     }
                 }
             })
+        },
+        {
+            path: "/ohlcv", method: "POST", eventHandler: new aws.lambda.Function("get_ohlcv", {
+                handler: "index.handler",
+                code: execPromise("yarn --cwd ./lambdas/get_ohlcv run clean && yarn --cwd ./lambdas/get_ohlcv run bundle").then(_ =>
+                    new pulumi.asset.FileArchive("./lambdas/get_ohlcv/bundle.zip")
+                ),
+                runtime: "nodejs12.x",
+                role: handlerRole.arn,
+                environment: {
+                    variables: {
+                        "OHLCV_TABLE": ohlcv.name,
+                    }
+                }
+            })
         }
     ],
 })
