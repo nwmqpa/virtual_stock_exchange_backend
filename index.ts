@@ -4,6 +4,8 @@ import * as awsx from "@pulumi/awsx";
 import * as util from "util";
 import { exec } from "child_process";
 
+const config = new pulumi.Config();
+
 const execPromise = util.promisify(exec)
 
 // Configure IAM so that the AWS Lambda can be run.
@@ -65,6 +67,7 @@ buys.onEvent("onBuyOrder", new aws.lambda.Function("on_buy_order", {
         variables: {
             "SELLS_TABLE": sells.name,
             "BUYS_TABLE": buys.name,
+            "PRIVATE_KEY_FCM": config.requireSecret("privateKeyFcm")
         }
     }
 }), {
@@ -82,6 +85,7 @@ sells.onEvent("onSellOrder", new aws.lambda.Function("on_sell_order", {
         variables: {
             "SELLS_TABLE": sells.name,
             "BUYS_TABLE": buys.name,
+            "PRIVATE_KEY_FCM": config.requireSecret("privateKeyFcm")
         }
     }
 }), {
@@ -107,7 +111,27 @@ const accounts = new aws.dynamodb.Table("accounts", {
     hashKey: "ownerId",
     readCapacity: 1,
     writeCapacity: 1,
+    streamEnabled: true,
+    streamViewType: "NEW_AND_OLD_IMAGES"
 });
+
+accounts.onEvent("onAccountChange", new aws.lambda.Function("on_account_change", {
+    handler: "index.handler",
+    code: execPromise("yarn --cwd ./lambdas/on_account_change run clean && yarn --cwd ./lambdas/on_account_change run bundle").then(_ =>
+        new pulumi.asset.FileArchive("./lambdas/on_account_change/bundle.zip")
+    ),
+    runtime: "nodejs12.x",
+    role: handlerRole.arn,
+    environment: {
+        variables: {
+            "ACCOUNTS_TABLE": accounts.name,
+            "PRIVATE_KEY_FCM": config.requireSecret("privateKeyFcm")
+        }
+    }
+}), {
+    startingPosition: "LATEST"
+})
+
 
 
 const resources = new aws.dynamodb.Table("resources", {

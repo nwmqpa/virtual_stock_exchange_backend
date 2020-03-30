@@ -1,0 +1,17 @@
+{
+  "name": "on_account_change",
+  "version": "1.0.0",
+  "description": "onAccountChange Lambda",
+  "main": "index.js",
+  "scripts": {
+    "compile": "tsc",
+    "redate": "find node_modules/ -exec touch -cd @0 {} + && find . -name '*.js' -exec touch -cd @0 {} + ",
+    "clean": "rm -rf *.js node_modules bundle.zip package-lock.json",
+    "bundle": "yarn --no-lockfile && yarn run compile && yarn run redate && zip bundle.zip -r node_modules *.js"
+  },
+  "author": "Thomas Nicollet",
+  "license": "ISC",
+  "dependencies": {
+    "firebase-admin": "^8.10.0"
+  }
+}
