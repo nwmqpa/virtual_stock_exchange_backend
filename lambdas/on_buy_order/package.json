@@ -1,7 +1,7 @@
 {
-  "name": "get_inventories",
+  "name": "on_buy_order",
   "version": "1.0.0",
-  "description": "Get inventories Lambda",
+  "description": "onBuyOrder Lambda",
   "main": "index.js",
   "scripts": {
     "compile": "tsc",

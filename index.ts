@@ -6,6 +6,27 @@ import { exec } from "child_process";
 
 const execPromise = util.promisify(exec)
 
+// Configure IAM so that the AWS Lambda can be run.
+const handlerRole = new aws.iam.Role("handlerRole", {
+    assumeRolePolicy: {
+        Version: "2012-10-17",
+        Statement: [{
+            Action: "sts:AssumeRole",
+            Principal: {
+                Service: "lambda.amazonaws.com",
+            },
+            Effect: "Allow",
+            Sid: "",
+        }],
+    },
+});
+
+new aws.iam.RolePolicyAttachment("funcRoleAttach", {
+    role: handlerRole,
+    policyArn: aws.iam.AWSLambdaFullAccess,
+});
+
+
 const buys = new aws.dynamodb.Table("buys", {
     attributes: [
         { name: "resourceId", type: "S" },
@@ -31,6 +52,42 @@ const sells = new aws.dynamodb.Table("sells", {
     streamEnabled: true,
     streamViewType: "NEW_AND_OLD_IMAGES"
 });
+
+
+buys.onEvent("onBuyOrder", new aws.lambda.Function("on_buy_order", {
+    handler: "index.handler",
+    code: execPromise("yarn --cwd ./lambdas/on_buy_order run clean && yarn --cwd ./lambdas/on_buy_order run bundle").then(_ =>
+        new pulumi.asset.FileArchive("./lambdas/on_buy_order/bundle.zip")
+    ),
+    runtime: "nodejs12.x",
+    role: handlerRole.arn,
+    environment: {
+        variables: {
+            "SELLS_TABLE": sells.name,
+            "BUYS_TABLE": buys.name,
+        }
+    }
+}), {
+    startingPosition: "LATEST"
+})
+
+sells.onEvent("onSellOrder", new aws.lambda.Function("on_sell_order", {
+    handler: "index.handler",
+    code: execPromise("yarn --cwd ./lambdas/on_sell_order run clean && yarn --cwd ./lambdas/on_sell_order run bundle").then(_ =>
+        new pulumi.asset.FileArchive("./lambdas/on_sell_order/bundle.zip")
+    ),
+    runtime: "nodejs12.x",
+    role: handlerRole.arn,
+    environment: {
+        variables: {
+            "SELLS_TABLE": sells.name,
+            "BUYS_TABLE": buys.name,
+        }
+    }
+}), {
+    startingPosition: "LATEST"
+})
+
 
 const inventories = new aws.dynamodb.Table("inventories", {
     attributes: [
@@ -106,27 +163,6 @@ const old_transactions = new aws.dynamodb.Table("old_transactions", {
     readCapacity: 1,
     writeCapacity: 1,
 });
-
-// Configure IAM so that the AWS Lambda can be run.
-const handlerRole = new aws.iam.Role("handlerRole", {
-    assumeRolePolicy: {
-        Version: "2012-10-17",
-        Statement: [{
-            Action: "sts:AssumeRole",
-            Principal: {
-                Service: "lambda.amazonaws.com",
-            },
-            Effect: "Allow",
-            Sid: "",
-        }],
-    },
-});
-
-new aws.iam.RolePolicyAttachment("funcRoleAttach", {
-    role: handlerRole,
-    policyArn: aws.iam.AWSLambdaFullAccess,
-});
-
 
 const api = new awsx.apigateway.API("virtual_stock_exchange", {
     routes: [
