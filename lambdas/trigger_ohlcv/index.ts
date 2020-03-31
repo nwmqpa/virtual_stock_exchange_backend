@@ -75,9 +75,9 @@ const getOHLCV = async (transactions: Transaction[]): Promise<{ open: number, lo
         },
         ScanIndexForward: false
     }).promise()
-    const open = ohlcv.Items == undefined ? transactions[0].price : ohlcv.Items[0]["close"];
-    let low = ohlcv.Items == undefined ? transactions[0].price : ohlcv.Items[0]["close"];
-    let high = ohlcv.Items == undefined ? transactions[0].price : ohlcv.Items[0]["close"];
+    const open = ohlcv.Items == undefined || ohlcv.Items[0] == undefined ? transactions[0].price : ohlcv.Items[0]["close"];
+    let low = ohlcv.Items == undefined || ohlcv.Items[0] == undefined ? transactions[0].price : ohlcv.Items[0]["close"];
+    let high = ohlcv.Items == undefined || ohlcv.Items[0] == undefined ? transactions[0].price : ohlcv.Items[0]["close"];
     let close = transactions[transactions.length - 1].price;
     let volumeto = 0;
     for (let transaction of transactions) {

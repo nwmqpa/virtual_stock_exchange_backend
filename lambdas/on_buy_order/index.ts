@@ -137,7 +137,7 @@ const createTransaction = async (order: Order, sellOrder: Order): Promise<[Order
             timestamp: Date.now(),
             transactionId: uuid.v4(),
             buyerId: order.issuerId,
-            sellerId: order.issuerId,
+            sellerId: sellOrder.issuerId,
             price: order.price,
             quantity: transferred
         }

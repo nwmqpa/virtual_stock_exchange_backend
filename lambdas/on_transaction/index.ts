@@ -108,7 +108,7 @@ const updateBuyerStock = async (transaction: Transaction) => {
             resourceId: transaction.resourceId
         }
     }).promise()).Item
-    if (item != undefined) {
+    if (item == undefined) {
         await client.put({
             TableName: inventoriesTable,
             Item: {
