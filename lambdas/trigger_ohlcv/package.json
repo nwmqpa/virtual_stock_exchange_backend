@@ -1,7 +1,7 @@
 {
-  "name": "on_buy_order",
+  "name": "on_sell_order",
   "version": "1.0.0",
-  "description": "onBuyOrder Lambda",
+  "description": "onSellOrder Lambda",
   "main": "index.js",
   "scripts": {
     "compile": "tsc",
@@ -12,8 +12,6 @@
   "author": "Thomas Nicollet",
   "license": "ISC",
   "dependencies": {
-    "firebase-admin": "^8.10.0",
-    "@types/uuid": "^7.0.2",
-    "uuid": "^7.0.2"
+    "firebase-admin": "^8.10.0"
   }
 }

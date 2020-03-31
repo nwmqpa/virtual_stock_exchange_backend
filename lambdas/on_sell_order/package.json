@@ -11,5 +11,9 @@
   },
   "author": "Thomas Nicollet",
   "license": "ISC",
-  "dependencies": {}
+  "dependencies": {
+    "firebase-admin": "^8.10.0",
+    "@types/uuid": "^7.0.2",
+    "uuid": "^7.0.2"
+  }
 }

@@ -55,44 +55,6 @@ const sells = new aws.dynamodb.Table("sells", {
     streamViewType: "NEW_AND_OLD_IMAGES"
 });
 
-
-buys.onEvent("onBuyOrder", new aws.lambda.Function("on_buy_order", {
-    handler: "index.handler",
-    code: execPromise("yarn --cwd ./lambdas/on_buy_order run clean && yarn --cwd ./lambdas/on_buy_order run bundle").then(_ =>
-        new pulumi.asset.FileArchive("./lambdas/on_buy_order/bundle.zip")
-    ),
-    runtime: "nodejs12.x",
-    role: handlerRole.arn,
-    environment: {
-        variables: {
-            "SELLS_TABLE": sells.name,
-            "BUYS_TABLE": buys.name,
-            "PRIVATE_KEY_FCM": config.requireSecret("privateKeyFcm")
-        }
-    }
-}), {
-    startingPosition: "LATEST"
-})
-
-sells.onEvent("onSellOrder", new aws.lambda.Function("on_sell_order", {
-    handler: "index.handler",
-    code: execPromise("yarn --cwd ./lambdas/on_sell_order run clean && yarn --cwd ./lambdas/on_sell_order run bundle").then(_ =>
-        new pulumi.asset.FileArchive("./lambdas/on_sell_order/bundle.zip")
-    ),
-    runtime: "nodejs12.x",
-    role: handlerRole.arn,
-    environment: {
-        variables: {
-            "SELLS_TABLE": sells.name,
-            "BUYS_TABLE": buys.name,
-            "PRIVATE_KEY_FCM": config.requireSecret("privateKeyFcm")
-        }
-    }
-}), {
-    startingPosition: "LATEST"
-})
-
-
 const accounts = new aws.dynamodb.Table("accounts", {
     attributes: [
         { name: "ownerId", type: "S" },
@@ -163,12 +125,14 @@ const resources = new aws.dynamodb.Table("resources", {
 const transactions = new aws.dynamodb.Table("transactions", {
     attributes: [
         { name: "resourceId", type: "S" },
-        { name: "transactionId", type: "S" },
+        { name: "timestamp", type: "N" },
     ],
     hashKey: "resourceId",
-    rangeKey: "transactionId",
+    rangeKey: "timestamp",
     readCapacity: 1,
     writeCapacity: 1,
+    streamEnabled: true,
+    streamViewType: "NEW_IMAGE"
 });
 
 const ohlcv = new aws.dynamodb.Table("ohlcv", {
@@ -182,27 +146,92 @@ const ohlcv = new aws.dynamodb.Table("ohlcv", {
     writeCapacity: 1,
 });
 
-const old_orders = new aws.dynamodb.Table("old_orders", {
+const oldTransactions = new aws.dynamodb.Table("old_transactions", {
     attributes: [
         { name: "resourceId", type: "S" },
-        { name: "orderId", type: "S" },
+        { name: "timestamp", type: "N" },
     ],
     hashKey: "resourceId",
-    rangeKey: "orderId",
+    rangeKey: "timestamp",
     readCapacity: 1,
     writeCapacity: 1,
 });
 
-const old_transactions = new aws.dynamodb.Table("old_transactions", {
-    attributes: [
-        { name: "resourceId", type: "S" },
-        { name: "transactionId", type: "S" },
-    ],
-    hashKey: "resourceId",
-    rangeKey: "transactionId",
-    readCapacity: 1,
-    writeCapacity: 1,
-});
+buys.onEvent("onBuyOrder", new aws.lambda.Function("on_buy_order", {
+    handler: "index.handler",
+    code: execPromise("yarn --cwd ./lambdas/on_buy_order run clean && yarn --cwd ./lambdas/on_buy_order run bundle").then(_ =>
+        new pulumi.asset.FileArchive("./lambdas/on_buy_order/bundle.zip")
+    ),
+    runtime: "nodejs12.x",
+    role: handlerRole.arn,
+    environment: {
+        variables: {
+            "ACCOUNTS_TABLE": accounts.name,
+            "SELLS_TABLE": sells.name,
+            "BUYS_TABLE": buys.name,
+            "TRANSACTIONS_TABLE": transactions.name,
+            "PRIVATE_KEY_FCM": config.requireSecret("privateKeyFcm")
+        }
+    }
+}), {
+    startingPosition: "LATEST"
+})
+
+sells.onEvent("onSellOrder", new aws.lambda.Function("on_sell_order", {
+    handler: "index.handler",
+    code: execPromise("yarn --cwd ./lambdas/on_sell_order run clean && yarn --cwd ./lambdas/on_sell_order run bundle").then(_ =>
+        new pulumi.asset.FileArchive("./lambdas/on_sell_order/bundle.zip")
+    ),
+    runtime: "nodejs12.x",
+    role: handlerRole.arn,
+    environment: {
+        variables: {
+            "ACCOUNTS_TABLE": accounts.name,
+            "SELLS_TABLE": sells.name,
+            "BUYS_TABLE": buys.name,
+            "TRANSACTIONS_TABLE": transactions.name,
+            "PRIVATE_KEY_FCM": config.requireSecret("privateKeyFcm")
+        }
+    }
+}), {
+    startingPosition: "LATEST"
+})
+
+transactions.onEvent("onTransactions", new aws.lambda.Function("on_transaction", {
+    handler: "index.handler",
+    code: execPromise("yarn --cwd ./lambdas/on_transaction run clean && yarn --cwd ./lambdas/on_transaction run bundle").then(_ =>
+        new pulumi.asset.FileArchive("./lambdas/on_transaction/bundle.zip")
+    ),
+    runtime: "nodejs12.x",
+    role: handlerRole.arn,
+    environment: {
+        variables: {
+            "ACCOUNTS_TABLE": accounts.name,
+            "INVENTORIES_TABLE": inventories.name,
+            "PRIVATE_KEY_FCM": config.requireSecret("privateKeyFcm")
+        }
+    }
+}), {
+    startingPosition: "LATEST"
+})
+
+aws.cloudwatch.onSchedule('trigger_ohlcv', 'rate(5 minutes)', new aws.lambda.Function("trigger_ohlcv", {
+    handler: "index.handler",
+    code: execPromise("yarn --cwd ./lambdas/trigger_ohlcv run clean && yarn --cwd ./lambdas/trigger_ohlcv run bundle").then(_ =>
+        new pulumi.asset.FileArchive("./lambdas/trigger_ohlcv/bundle.zip")
+    ),
+    runtime: "nodejs12.x",
+    role: handlerRole.arn,
+    environment: {
+        variables: {
+            "OLD_TRANSACTIONS_TABLE": oldTransactions.name,
+            "TRANSACTIONS_TABLE": transactions.name,
+            "OHLCV_TABLE": ohlcv.name,
+            "RESOURCES_TABLE": resources.name,
+            "PRIVATE_KEY_FCM": config.requireSecret("privateKeyFcm")
+        }
+    }
+}))
 
 const api = new awsx.apigateway.API("virtual_stock_exchange", {
     routes: [

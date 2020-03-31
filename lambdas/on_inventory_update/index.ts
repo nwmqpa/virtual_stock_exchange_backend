@@ -1,6 +1,5 @@
 import * as aws from "@pulumi/aws";
 import * as AWS from 'aws-sdk';
-import { exists } from "fs";
 import * as admin from "firebase-admin";
 
 type Event = aws.dynamodb.TableEvent
@@ -53,9 +52,9 @@ const getFcmTokenForAccount = async (ownerId: string): Promise<string | undefine
         .then((item) => item != undefined ? (item as Account).fcmToken : undefined);
 }
 
-const updateInventory = async (record: aws.dynamodb.TableEventRecord) => {
-    if (record.dynamodb.NewImage != undefined) {
-        const resource = AWS.DynamoDB.Converter.unmarshall(record.dynamodb.NewImage) as Resource
+const updateInventory = async (record: any, amount?: number) => {
+    if (record != undefined) {
+        const resource = AWS.DynamoDB.Converter.unmarshall(record) as Resource
         const token = await getFcmTokenForAccount(resource.ownerId);
         if (token != undefined) {
             await admin.messaging().send({
@@ -64,7 +63,7 @@ const updateInventory = async (record: aws.dynamodb.TableEventRecord) => {
                     value: JSON.stringify({
                         action: "setItemAmount",
                         resourceId: resource.resourceId,
-                        value: resource.quantity
+                        value: amount != undefined ? amount : resource.quantity
                     })
                 },
                 token
@@ -81,12 +80,13 @@ export const handler = async (event: Event) => {
     await Promise.all(event.Records.map(async (record) => {
         switch (record.eventName) {
             case 'INSERT':
-                await updateInventory(record)
+                await updateInventory(record.dynamodb.NewImage)
                 break;
             case 'MODIFY':
-                await updateInventory(record)
+                await updateInventory(record.dynamodb.NewImage)
                 break;
             case 'REMOVE':
+                await updateInventory(record.dynamodb.OldImage, 0)
                 break;
         }
     }))
